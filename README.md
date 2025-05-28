@@ -1,5 +1,9 @@
 # Azure Core Governance Infrastructure as Code
 
+[![Build Status](https://dev.azure.com/your-org/your-project/_apis/build/status/your-repo?branchName=main)](https://dev.azure.com/your-org/your-project/_build/latest?definitionId=1&branchName=main)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://pre-commit.com/)
+
 This repository contains Infrastructure as Code (IaC) templates for implementing Azure governance patterns at enterprise scale. It provides a foundation for Azure landing zones with comprehensive governance controls including management groups, policies, role assignments, and security baselines.
 
 ## 🏗️ Repository Structure

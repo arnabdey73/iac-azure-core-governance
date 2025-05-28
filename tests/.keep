@@ -1,0 +1,34 @@
+# Placeholder for test files. Add Terratest, kitchen-terraform, or other test scripts here.
+
+---
+
+## Potential Tests
+
+### 1. Terratest: Management Group Hierarchy
+
+- Validate that all expected management groups are created and have the correct parent-child relationships.
+- Example: `TestManagementGroupHierarchy` (Go)
+
+### 2. Terratest: Policy Assignment
+
+- Check that custom policies (e.g., required tags, allowed locations) are assigned at the correct scope.
+- Example: `TestPolicyAssignments` (Go)
+
+### 3. Terratest: Role Assignment
+
+- Ensure custom roles are created and assigned to the correct principals.
+- Example: `TestRoleAssignments` (Go)
+
+### 4. Policy Compliance Check (CI/CD)
+
+- Use Azure CLI or REST API to verify that all resources are compliant with assigned policies after deployment.
+- Example: `az policy state list --filter "complianceState eq 'NonCompliant'"`
+
+### 5. Terraform Plan/Apply Test
+
+- Use `terraform plan` in CI to ensure no unexpected changes.
+- Use `terraform validate` and `terraform fmt` as pre-commit hooks.
+
+---
+
+See [Terratest](https://terratest.gruntwork.io/) and [kitchen-terraform](https://newcontext-oss.github.io/kitchen-terraform/) for implementation details.
