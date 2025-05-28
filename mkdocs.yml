@@ -1,0 +1,49 @@
+site_name: Azure Core Governance Solution
+site_description: Consolidated documentation for Azure Core Governance
+site_author: Arnab Dey
+repo_url: https://github.com/arnabdey73/iac-azure-core-governance
+nav:
+  - Home: docs/consolidated-docs.md
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.top
+    - toc.integrate
+    - content.code.annotate
+    - content.tabs.link
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - codehilite
+  - footnotes
+  - meta
+  - tables
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.details
+  - pymdownx.emoji
+  - pymdownx.tasklist
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.caret
+  - pymdownx.tilde
+  - pymdownx.smartsymbols
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/arnabdey73/iac-azure-core-governance
+plugins:
+  - search
+  - with-pdf:
+      output_path: site/azure-core-governance.pdf
+      cover_title: Azure Core Governance Solution
+      cover_subtitle: Consolidated Documentation
+      toc_title: Table of Contents
+      author: AFRY
+      copyright: AFRY
+      toc_level: 2
