@@ -1,0 +1,136 @@
+# Terraform Deployment Pipeline Template
+# Reusable template for deploying Terraform in Azure DevOps pipelines
+
+parameters:
+  - name: terraformVersion
+    displayName: 'Terraform Version'
+    type: string
+    default: '1.5.0'
+  - name: workingDirectory
+    displayName: 'Working Directory'
+    type: string
+    default: '$(System.DefaultWorkingDirectory)/terraform-es'
+  - name: serviceConnection
+    displayName: 'Azure Service Connection'
+    type: string
+  - name: backendServiceConnection
+    displayName: 'Azure Service Connection for Backend'
+    type: string
+  - name: backendResourceGroupName
+    displayName: 'Backend Resource Group Name'
+    type: string
+  - name: backendStorageAccountName
+    displayName: 'Backend Storage Account Name'
+    type: string
+  - name: backendContainerName
+    displayName: 'Backend Container Name'
+    type: string
+    default: 'tfstate'
+  - name: backendKey
+    displayName: 'Backend State File Key'
+    type: string
+    default: 'governance.tfstate'
+  - name: tfVarsFile
+    displayName: 'Terraform Variables File'
+    type: string
+    default: 'terraform.tfvars'
+  - name: planOnly
+    displayName: 'Plan Only (Do Not Apply)'
+    type: boolean
+    default: false
+  - name: destroyMode
+    displayName: 'Destroy Mode'
+    type: boolean
+    default: false
+
+steps:
+  - task: TerraformInstaller@0
+    displayName: 'Install Terraform'
+    inputs:
+      terraformVersion: '${{ parameters.terraformVersion }}'
+
+  - task: DownloadBuildArtifacts@0
+    displayName: 'Download Terraform Files'
+    inputs:
+      buildType: 'current'
+      downloadType: 'single'
+      artifactName: 'terraform-files'
+      downloadPath: '$(System.ArtifactsDirectory)'
+
+  - task: CopyFiles@2
+    displayName: 'Copy Terraform Files'
+    inputs:
+      sourceFolder: '$(System.ArtifactsDirectory)/terraform-files'
+      contents: '**'
+      targetFolder: '${{ parameters.workingDirectory }}'
+
+  - task: AzureCLI@2
+    displayName: 'Terraform Init'
+    inputs:
+      azureSubscription: '${{ parameters.backendServiceConnection }}'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      workingDirectory: '${{ parameters.workingDirectory }}'
+      inlineScript: |
+        echo "Initializing Terraform..."
+        terraform init \
+          -backend-config="resource_group_name=${{ parameters.backendResourceGroupName }}" \
+          -backend-config="storage_account_name=${{ parameters.backendStorageAccountName }}" \
+          -backend-config="container_name=${{ parameters.backendContainerName }}" \
+          -backend-config="key=${{ parameters.backendKey }}"
+
+  - task: AzureCLI@2
+    displayName: 'Terraform Plan'
+    inputs:
+      azureSubscription: '${{ parameters.serviceConnection }}'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      workingDirectory: '${{ parameters.workingDirectory }}'
+      inlineScript: |
+        echo "Planning Terraform deployment..."
+        if [ "${{ parameters.destroyMode }}" = "true" ]; then
+          terraform plan -destroy -var-file="${{ parameters.tfVarsFile }}" -out=tfplan
+        else
+          terraform plan -var-file="${{ parameters.tfVarsFile }}" -out=tfplan
+        fi
+
+  - task: AzureCLI@2
+    displayName: 'Terraform Apply'
+    condition: and(succeeded(), eq('${{ parameters.planOnly }}', false))
+    inputs:
+      azureSubscription: '${{ parameters.serviceConnection }}'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      workingDirectory: '${{ parameters.workingDirectory }}'
+      inlineScript: |
+        echo "Applying Terraform plan..."
+        terraform apply -auto-approve tfplan
+
+  - task: AzureCLI@2
+    displayName: 'Terraform Output'
+    condition: and(succeeded(), eq('${{ parameters.planOnly }}', false), eq('${{ parameters.destroyMode }}', false))
+    inputs:
+      azureSubscription: '${{ parameters.serviceConnection }}'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      workingDirectory: '${{ parameters.workingDirectory }}'
+      inlineScript: |
+        echo "Terraform outputs:"
+        terraform output
+
+  - task: PublishTestResults@2
+    displayName: 'Publish Terraform Plan Results'
+    condition: always()
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: '**/terraform-plan-results.xml'
+      searchFolder: '${{ parameters.workingDirectory }}'
+      failTaskOnFailedTests: false
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Terraform Plan'
+    condition: always()
+    inputs:
+      pathToPublish: '${{ parameters.workingDirectory }}/tfplan'
+      artifactName: 'terraform-plan'
+      publishLocation: 'Container'

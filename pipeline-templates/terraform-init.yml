@@ -1,0 +1,79 @@
+# Terraform Initialization Pipeline Template
+# Reusable template for initializing Terraform in Azure DevOps pipelines
+
+parameters:
+  - name: terraformVersion
+    displayName: 'Terraform Version'
+    type: string
+    default: '1.5.0'
+  - name: workingDirectory
+    displayName: 'Working Directory'
+    type: string
+    default: '$(System.DefaultWorkingDirectory)/terraform-es'
+  - name: backendServiceConnection
+    displayName: 'Azure Service Connection for Backend'
+    type: string
+  - name: backendResourceGroupName
+    displayName: 'Backend Resource Group Name'
+    type: string
+  - name: backendStorageAccountName
+    displayName: 'Backend Storage Account Name'
+    type: string
+  - name: backendContainerName
+    displayName: 'Backend Container Name'
+    type: string
+    default: 'tfstate'
+  - name: backendKey
+    displayName: 'Backend State File Key'
+    type: string
+    default: 'governance.tfstate'
+
+steps:
+  - task: TerraformInstaller@0
+    displayName: 'Install Terraform'
+    inputs:
+      terraformVersion: '${{ parameters.terraformVersion }}'
+
+  - task: AzureCLI@2
+    displayName: 'Terraform Init'
+    inputs:
+      azureSubscription: '${{ parameters.backendServiceConnection }}'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      workingDirectory: '${{ parameters.workingDirectory }}'
+      inlineScript: |
+        echo "Initializing Terraform..."
+        terraform init \
+          -backend-config="resource_group_name=${{ parameters.backendResourceGroupName }}" \
+          -backend-config="storage_account_name=${{ parameters.backendStorageAccountName }}" \
+          -backend-config="container_name=${{ parameters.backendContainerName }}" \
+          -backend-config="key=${{ parameters.backendKey }}"
+
+  - task: AzureCLI@2
+    displayName: 'Terraform Validate'
+    inputs:
+      azureSubscription: '${{ parameters.backendServiceConnection }}'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      workingDirectory: '${{ parameters.workingDirectory }}'
+      inlineScript: |
+        echo "Validating Terraform configuration..."
+        terraform validate
+
+  - task: AzureCLI@2
+    displayName: 'Terraform Format Check'
+    inputs:
+      azureSubscription: '${{ parameters.backendServiceConnection }}'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      workingDirectory: '${{ parameters.workingDirectory }}'
+      inlineScript: |
+        echo "Checking Terraform formatting..."
+        terraform fmt -check=true -diff=true
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Terraform Files'
+    inputs:
+      pathToPublish: '${{ parameters.workingDirectory }}'
+      artifactName: 'terraform-files'
+      publishLocation: 'Container'

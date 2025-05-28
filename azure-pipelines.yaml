@@ -1,0 +1,219 @@
+# Azure DevOps Pipeline for Azure Core Governance
+# This pipeline implements CI/CD for Terraform-based governance infrastructure
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - terraform-es/**
+      - lib/**
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - terraform-es/**
+      - lib/**
+
+variables:
+  - name: terraformVersion
+    value: '1.5.0'
+  - name: workingDirectory
+    value: '$(System.DefaultWorkingDirectory)/terraform-es'
+  
+  # Backend configuration
+  - name: backendResourceGroupName
+    value: 'rg-terraform-state'
+  - name: backendStorageAccountName
+    value: 'stterraformstate$(Build.SourceBranchName)'
+  - name: backendContainerName
+    value: 'tfstate'
+  - name: backendKey
+    value: 'governance.tfstate'
+
+  # Environment-specific variables
+  - ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    - name: environment
+      value: 'prod'
+    - name: serviceConnection
+      value: 'azure-governance-prod'
+    - name: tfVarsFile
+      value: 'terraform.prod.tfvars'
+  
+  - ${{ if ne(variables['Build.SourceBranchName'], 'main') }}:
+    - name: environment
+      value: 'dev'
+    - name: serviceConnection
+      value: 'azure-governance-dev'
+    - name: tfVarsFile
+      value: 'terraform.dev.tfvars'
+
+stages:
+  # Validation Stage
+  - stage: Validate
+    displayName: 'Validate Infrastructure'
+    jobs:
+      - job: TerraformValidation
+        displayName: 'Terraform Validation'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - template: pipeline-templates/terraform-init.yml
+            parameters:
+              terraformVersion: $(terraformVersion)
+              workingDirectory: $(workingDirectory)
+              backendServiceConnection: $(serviceConnection)
+              backendResourceGroupName: $(backendResourceGroupName)
+              backendStorageAccountName: $(backendStorageAccountName)
+              backendContainerName: $(backendContainerName)
+              backendKey: $(backendKey)
+
+      - job: SecurityScan
+        displayName: 'Security Scan'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: $(terraformVersion)
+
+          - task: Bash@3
+            displayName: 'Install Checkov'
+            inputs:
+              targetType: 'inline'
+              script: |
+                pip3 install checkov
+
+          - task: Bash@3
+            displayName: 'Run Checkov Security Scan'
+            inputs:
+              targetType: 'inline'
+              workingDirectory: $(workingDirectory)
+              script: |
+                checkov -d . --framework terraform --output junitxml --output-file-path $(Agent.TempDirectory)/checkov-report.xml
+
+          - task: PublishTestResults@2
+            displayName: 'Publish Security Scan Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '$(Agent.TempDirectory)/checkov-report.xml'
+              testRunTitle: 'Checkov Security Scan'
+
+  # Plan Stage
+  - stage: Plan
+    displayName: 'Plan Infrastructure'
+    dependsOn: Validate
+    condition: succeeded()
+    jobs:
+      - job: TerraformPlan
+        displayName: 'Terraform Plan'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - template: pipeline-templates/terraform-deploy.yml
+            parameters:
+              terraformVersion: $(terraformVersion)
+              workingDirectory: $(workingDirectory)
+              serviceConnection: $(serviceConnection)
+              backendServiceConnection: $(serviceConnection)
+              backendResourceGroupName: $(backendResourceGroupName)
+              backendStorageAccountName: $(backendStorageAccountName)
+              backendContainerName: $(backendContainerName)
+              backendKey: $(backendKey)
+              tfVarsFile: $(tfVarsFile)
+              planOnly: true
+
+  # Deploy Stage (Production)
+  - stage: DeployProd
+    displayName: 'Deploy to Production'
+    dependsOn: Plan
+    condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'main'))
+    jobs:
+      - deployment: TerraformDeploy
+        displayName: 'Terraform Deploy'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'azure-governance-prod'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: pipeline-templates/terraform-deploy.yml
+                  parameters:
+                    terraformVersion: $(terraformVersion)
+                    workingDirectory: $(workingDirectory)
+                    serviceConnection: $(serviceConnection)
+                    backendServiceConnection: $(serviceConnection)
+                    backendResourceGroupName: $(backendResourceGroupName)
+                    backendStorageAccountName: $(backendStorageAccountName)
+                    backendContainerName: $(backendContainerName)
+                    backendKey: $(backendKey)
+                    tfVarsFile: $(tfVarsFile)
+                    planOnly: false
+
+  # Deploy Stage (Development)
+  - stage: DeployDev
+    displayName: 'Deploy to Development'
+    dependsOn: Plan
+    condition: and(succeeded(), ne(variables['Build.SourceBranchName'], 'main'))
+    jobs:
+      - deployment: TerraformDeploy
+        displayName: 'Terraform Deploy'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'azure-governance-dev'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: pipeline-templates/terraform-deploy.yml
+                  parameters:
+                    terraformVersion: $(terraformVersion)
+                    workingDirectory: $(workingDirectory)
+                    serviceConnection: $(serviceConnection)
+                    backendServiceConnection: $(serviceConnection)
+                    backendResourceGroupName: $(backendResourceGroupName)
+                    backendStorageAccountName: $(backendStorageAccountName)
+                    backendContainerName: $(backendContainerName)
+                    backendKey: $(backendKey)
+                    tfVarsFile: $(tfVarsFile)
+                    planOnly: false
+
+  # Compliance Check Stage
+  - stage: ComplianceCheck
+    displayName: 'Compliance Check'
+    dependsOn: 
+      - DeployProd
+      - DeployDev
+    condition: or(succeeded('DeployProd'), succeeded('DeployDev'))
+    jobs:
+      - job: PolicyCompliance
+        displayName: 'Policy Compliance Check'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: AzureCLI@2
+            displayName: 'Check Policy Compliance'
+            inputs:
+              azureSubscription: $(serviceConnection)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Checking policy compliance..."
+                az policy state list --resource-group "rg-governance-monitoring-$(environment)" --output table
+                
+                echo "Checking for policy violations..."
+                violations=$(az policy state list --filter "complianceState eq 'NonCompliant'" --query "length(@)")
+                if [ "$violations" -gt "0" ]; then
+                  echo "Warning: Found $violations policy violations"
+                  az policy state list --filter "complianceState eq 'NonCompliant'" --output table
+                else
+                  echo "No policy violations found"
+                fi

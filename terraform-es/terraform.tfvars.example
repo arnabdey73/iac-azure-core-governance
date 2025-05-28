@@ -1,0 +1,25 @@
+# Sample terraform.tfvars file
+# Copy this file to terraform.tfvars and customize the values
+
+# Organization configuration
+organization_name = "contoso"
+environment       = "prod"
+location         = "West Europe"
+
+# Management group configuration
+root_management_group_id = "" # Leave empty to use tenant root
+
+# Subscription IDs to apply governance to
+subscription_ids = [
+  # "00000000-0000-0000-0000-000000000000",  # Production subscription
+  # "11111111-1111-1111-1111-111111111111",  # Development subscription
+]
+
+# Common tags
+tags = {
+  Project     = "Azure-Core-Governance"
+  ManagedBy   = "Terraform"
+  Environment = "Production"
+  Owner       = "Platform-Team"
+  CostCenter  = "IT-Operations"
+}
