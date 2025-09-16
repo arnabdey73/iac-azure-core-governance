@@ -1,0 +1,201 @@
+# Subscription Vending Machine Configuration
+# Automated subscription provisioning and configuration
+
+apiVersion: v1
+kind: SubscriptionVendingMachine
+metadata:
+  name: "azure-subscription-vending"
+  version: "1.0.0"
+  description: "Automated subscription vending with governance controls"
+
+# Subscription Templates
+subscriptionTemplates:
+  - name: "landing-zone-template"
+    displayName: "Landing Zone Subscription"
+    description: "Standard landing zone subscription with governance controls"
+    
+    configuration:
+      billingScope: "/providers/Microsoft.Billing/billingAccounts/{billingAccountId}/enrollmentAccounts/{enrollmentAccountId}"
+      managementGroupId: "mg-landing-zones"
+      workload: "Production"
+      
+    # Governance Settings
+    governance:
+      policyInitiatives:
+        - "enterprise-security-baseline"
+        - "cost-management-baseline"
+      roleAssignments:
+        - principalId: "{requesterId}"
+          roleDefinitionId: "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"  # Contributor
+        - principalId: "{approverGroupId}"
+          roleDefinitionId: "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"  # Owner
+          
+    # Initial Resources
+    initialResources:
+      - type: "ResourceGroup"
+        name: "rg-{subscriptionName}-networking-{environment}"
+        location: "{primaryLocation}"
+        
+      - type: "ResourceGroup"
+        name: "rg-{subscriptionName}-security-{environment}"
+        location: "{primaryLocation}"
+        
+      - type: "LogAnalyticsWorkspace"
+        name: "log-{subscriptionName}-{environment}"
+        resourceGroup: "rg-{subscriptionName}-security-{environment}"
+        
+      - type: "KeyVault"
+        name: "kv-{subscriptionName}-{environment}-{randomId}"
+        resourceGroup: "rg-{subscriptionName}-security-{environment}"
+        
+    # Budget Configuration
+    budget:
+      amount: 10000
+      timeGrain: "Monthly"
+      alertThresholds: [75, 90, 100]
+      contactEmails: ["{requesterEmail}", "{approverEmail}"]
+
+  - name: "sandbox-template"
+    displayName: "Sandbox Subscription"
+    description: "Development/sandbox subscription with relaxed policies"
+    
+    configuration:
+      billingScope: "/providers/Microsoft.Billing/billingAccounts/{billingAccountId}/enrollmentAccounts/{enrollmentAccountId}"
+      managementGroupId: "mg-sandbox"
+      workload: "DevTest"
+      
+    governance:
+      policyInitiatives:
+        - "sandbox-baseline"
+      roleAssignments:
+        - principalId: "{requesterId}"
+          roleDefinitionId: "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"  # Owner
+          
+    budget:
+      amount: 2000
+      timeGrain: "Monthly"
+      alertThresholds: [80, 100]
+      contactEmails: ["{requesterEmail}"]
+
+# Approval Workflow
+approvalWorkflow:
+  enabled: true
+  
+  stages:
+    - name: "technical-review"
+      displayName: "Technical Review"
+      approvers:
+        - group: "cloud-architects@company.com"
+      timeout: "72h"
+      requirements:
+        - "business-justification"
+        - "technical-requirements"
+        - "cost-estimate"
+        
+    - name: "business-approval"
+      displayName: "Business Approval"
+      approvers:
+        - group: "business-owners@company.com"
+        - group: "finance-team@company.com"
+      timeout: "120h"
+      requirements:
+        - "budget-approval"
+        - "compliance-attestation"
+
+# Request Schema
+requestSchema:
+  required:
+    - subscriptionName
+    - businessJustification
+    - environment
+    - costCenter
+    - technicalOwner
+    - businessOwner
+    
+  properties:
+    subscriptionName:
+      type: string
+      pattern: "^[a-z0-9-]{3,63}$"
+      description: "Subscription display name (lowercase, alphanumeric, hyphens)"
+      
+    businessJustification:
+      type: string
+      minLength: 100
+      description: "Detailed business justification for the subscription"
+      
+    environment:
+      type: string
+      enum: ["dev", "test", "staging", "prod", "sandbox"]
+      description: "Target environment"
+      
+    costCenter:
+      type: string
+      pattern: "^CC-[0-9]{4}$"
+      description: "Cost center code (CC-XXXX format)"
+      
+    technicalOwner:
+      type: string
+      format: email
+      description: "Technical owner email address"
+      
+    businessOwner:
+      type: string
+      format: email
+      description: "Business owner email address"
+      
+    expectedMonthlySpend:
+      type: number
+      minimum: 0
+      maximum: 100000
+      description: "Expected monthly spend in USD"
+      
+    projectDuration:
+      type: string
+      enum: ["3-months", "6-months", "12-months", "ongoing"]
+      description: "Expected project duration"
+      
+    complianceRequirements:
+      type: array
+      items:
+        enum: ["PCI-DSS", "HIPAA", "SOC2", "ISO27001", "GDPR", "None"]
+      description: "Specific compliance requirements"
+
+# Automation Settings
+automation:
+  enableAutoProvisioning: true
+  maxConcurrentRequests: 10
+  retryAttempts: 3
+  
+  notifications:
+    onCreate:
+      - requester
+      - approvers
+      - cloud-platform-team@company.com
+      
+    onApproval:
+      - requester
+      - finance-team@company.com
+      
+    onProvisioning:
+      - requester
+      - subscription-administrators@company.com
+      
+    onCompletion:
+      - requester
+      - approvers
+      - audit-team@company.com
+
+# Monitoring and Reporting
+monitoring:
+  enableUsageTracking: true
+  enableCostTracking: true
+  enableComplianceTracking: true
+  
+  reports:
+    - name: "monthly-subscription-report"
+      schedule: "0 0 1 * *"  # First day of every month
+      recipients: ["finance-team@company.com", "cloud-platform-team@company.com"]
+      
+    - name: "weekly-usage-summary"
+      schedule: "0 8 * * MON"  # Every Monday at 8 AM
+      recipients: ["cloud-platform-team@company.com"]

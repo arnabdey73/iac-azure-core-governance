@@ -1,0 +1,273 @@
+# Azure DevOps Pipeline for Policy Testing and Validation
+# Automated testing of Azure policies with Conftest and OPA
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - policy-framework/**
+      - scripts/validate-policies.sh
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - policy-framework/**
+      - scripts/validate-policies.sh
+
+variables:
+  - name: vmImage
+    value: 'ubuntu-latest'
+  - name: workingDirectory
+    value: '$(System.DefaultWorkingDirectory)'
+  - name: policyFrameworkDir
+    value: '$(System.DefaultWorkingDirectory)/policy-framework'
+  - name: testResultsDir
+    value: '$(System.DefaultWorkingDirectory)/test-results'
+
+stages:
+  - stage: PolicyValidation
+    displayName: 'Policy Validation and Testing'
+    jobs:
+      - job: ValidatePolicySyntax
+        displayName: 'Validate Policy Syntax'
+        pool:
+          vmImage: $(vmImage)
+        
+        steps:
+          - checkout: self
+            displayName: 'Checkout source code'
+            
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: '18.x'
+              
+          - script: |
+              # Install yq for YAML processing
+              sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+              sudo chmod +x /usr/local/bin/yq
+              
+              # Install Conftest
+              CONFTEST_VERSION="0.46.0"
+              wget "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+              tar xzf "conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+              sudo mv conftest /usr/local/bin/
+              
+              # Install OPA
+              OPA_VERSION="0.57.0"
+              wget "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64"
+              sudo chmod +x opa_linux_amd64
+              sudo mv opa_linux_amd64 /usr/local/bin/opa
+              
+              # Verify installations
+              conftest --version
+              opa version
+            displayName: 'Install dependencies'
+            
+          - script: |
+              echo "Validating policy catalog structure..."
+              
+              # Validate policy catalog YAML syntax
+              if ! yq eval '.' $(policyFrameworkDir)/catalog/policy-catalog.yaml > /dev/null 2>&1; then
+                echo "❌ Policy catalog YAML is invalid"
+                exit 1
+              fi
+              echo "✅ Policy catalog YAML is valid"
+              
+              # Validate policy JSON files
+              echo "Validating policy JSON files..."
+              find $(policyFrameworkDir)/catalog -name "*.json" | while read -r file; do
+                echo "  Checking $file..."
+                if ! jq empty "$file" 2>/dev/null; then
+                  echo "❌ Invalid JSON in $file"
+                  exit 1
+                fi
+                echo "  ✅ Valid JSON"
+              done
+              
+              echo "✅ All policy files have valid syntax"
+            displayName: 'Validate policy file syntax'
+            
+          - script: |
+              echo "Validating Rego test files..."
+              
+              # Check if test files exist
+              if [ ! -d "$(policyFrameworkDir)/tests" ]; then
+                echo "❌ No test directory found"
+                exit 1
+              fi
+              
+              # Validate Rego syntax
+              find $(policyFrameworkDir)/tests -name "*.rego" | while read -r file; do
+                echo "  Validating $file..."
+                if ! opa fmt --list "$file" > /dev/null 2>&1; then
+                  echo "❌ Syntax error in $file"
+                  opa fmt --diff "$file"
+                  exit 1
+                fi
+                echo "  ✅ Valid Rego syntax"
+              done
+              
+              echo "✅ All Rego files have valid syntax"
+            displayName: 'Validate Rego test syntax'
+
+      - job: RunPolicyTests
+        displayName: 'Run Policy Tests'
+        dependsOn: ValidatePolicySyntax
+        pool:
+          vmImage: $(vmImage)
+          
+        steps:
+          - checkout: self
+            displayName: 'Checkout source code'
+            
+          - script: |
+              # Install dependencies (reuse from previous job)
+              sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+              sudo chmod +x /usr/local/bin/yq
+              
+              CONFTEST_VERSION="0.46.0"
+              wget "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+              tar xzf "conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+              sudo mv conftest /usr/local/bin/
+              
+              OPA_VERSION="0.57.0"
+              wget "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64"
+              sudo chmod +x opa_linux_amd64
+              sudo mv opa_linux_amd64 /usr/local/bin/opa
+            displayName: 'Install dependencies'
+            
+          - script: |
+              # Make script executable
+              chmod +x scripts/validate-policies.sh
+              
+              # Run policy validation script
+              ./scripts/validate-policies.sh test
+            displayName: 'Run policy tests'
+            workingDirectory: $(workingDirectory)
+            
+          - task: PublishTestResults@2
+            displayName: 'Publish test results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '$(testResultsDir)/policy-test-results.xml'
+              testRunTitle: 'Policy Tests'
+              
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish test artifacts'
+            condition: always()
+            inputs:
+              pathToPublish: '$(testResultsDir)'
+              artifactName: 'PolicyTestResults'
+
+      - job: GeneratePolicyDocumentation
+        displayName: 'Generate Policy Documentation'
+        dependsOn: RunPolicyTests
+        pool:
+          vmImage: $(vmImage)
+          
+        steps:
+          - checkout: self
+            displayName: 'Checkout source code'
+            
+          - script: |
+              sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+              sudo chmod +x /usr/local/bin/yq
+            displayName: 'Install yq'
+            
+          - script: |
+              chmod +x scripts/validate-policies.sh
+              ./scripts/validate-policies.sh docs
+            displayName: 'Generate policy documentation'
+            workingDirectory: $(workingDirectory)
+            
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish documentation'
+            inputs:
+              pathToPublish: 'docs/policies'
+              artifactName: 'PolicyDocumentation'
+
+  - stage: PolicyCompliance
+    displayName: 'Policy Compliance Check'
+    dependsOn: PolicyValidation
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    
+    jobs:
+      - job: ComplianceCheck
+        displayName: 'Run Compliance Checks'
+        pool:
+          vmImage: $(vmImage)
+          
+        steps:
+          - checkout: self
+            displayName: 'Checkout source code'
+            
+          - task: AzureCLI@2
+            displayName: 'Check policy compliance'
+            inputs:
+              azureSubscription: '$(serviceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Checking policy compliance state..."
+                
+                # Get policy compliance summary
+                az policy state summarize \
+                  --management-group "$(managementGroupId)" \
+                  --query "results[0].{nonCompliantResources: nonCompliantResources, nonCompliantPolicies: nonCompliantPolicies}" \
+                  --output table
+                
+                # Get detailed compliance data
+                az policy state list \
+                  --management-group "$(managementGroupId)" \
+                  --filter "complianceState eq 'NonCompliant'" \
+                  --query "[].{resourceId: resourceId, policyDefinitionName: policyDefinitionName, complianceState: complianceState}" \
+                  --output table
+                
+                # Fail if there are non-compliant resources (optional)
+                # NONCOMPLIANT=$(az policy state summarize --management-group "$(managementGroupId)" --query "results[0].nonCompliantResources" --output tsv)
+                # if [ "$NONCOMPLIANT" -gt "0" ]; then
+                #   echo "❌ Found $NONCOMPLIANT non-compliant resources"
+                #   exit 1
+                # fi
+
+  - stage: PolicyDeployment
+    displayName: 'Deploy Policies'
+    dependsOn: 
+      - PolicyValidation 
+      - PolicyCompliance
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    
+    jobs:
+      - deployment: DeployPolicies
+        displayName: 'Deploy Policy Framework'
+        environment: 'azure-governance-prod'
+        pool:
+          vmImage: $(vmImage)
+          
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  displayName: 'Checkout source code'
+                  
+                - template: ../pipeline-templates/terraform-deploy.yml
+                  parameters:
+                    terraformVersion: '1.5.0'
+                    workingDirectory: '$(System.DefaultWorkingDirectory)/terraform-es'
+                    serviceConnection: '$(serviceConnection)'
+                    backendServiceConnection: '$(backendServiceConnection)'
+                    backendResourceGroupName: '$(backendResourceGroupName)'
+                    backendStorageAccountName: '$(backendStorageAccountName)'
+                    backendContainerName: 'tfstate'
+                    backendKey: 'governance-policy-framework.tfstate'
+                    tfVarsFile: 'terraform.prod.tfvars'
+                    planOnly: false

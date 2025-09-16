@@ -51,3 +51,43 @@ variable "security_contact_phone" {
   type        = string
   default     = "+1-555-123-4567"
 }
+
+# Policy Framework Variables
+variable "allowed_vm_sizes" {
+  description = "List of allowed VM sizes for cost management policies"
+  type        = list(string)
+  default = [
+    "Standard_B1s",
+    "Standard_B2s", 
+    "Standard_D2s_v3",
+    "Standard_D4s_v3"
+  ]
+}
+
+variable "allowed_locations" {
+  description = "List of allowed Azure regions for resource deployment"
+  type        = list(string)
+  default = [
+    "eastus2",
+    "centralus", 
+    "westus2"
+  ]
+}
+
+variable "notification_emails" {
+  description = "List of emails for policy notifications"
+  type = object({
+    security_team      = string
+    compliance_team    = string
+    cost_management    = string
+    cloud_architects   = string
+    business_owners    = string
+  })
+  default = {
+    security_team      = "security-team@company.com"
+    compliance_team    = "compliance-team@company.com"
+    cost_management    = "cost-management@company.com"
+    cloud_architects   = "cloud-architects@company.com"
+    business_owners    = "business-owners@company.com"
+  }
+}

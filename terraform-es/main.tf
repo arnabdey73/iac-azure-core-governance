@@ -56,7 +56,21 @@ module "management_groups" {
   organization_name        = var.organization_name
 }
 
-# Policies Module
+# Enhanced Policy Framework Module
+module "policy_framework" {
+  source = "./policy-framework"
+  
+  root_management_group_id           = module.management_groups.root_management_group_id
+  landing_zones_management_group_id  = module.management_groups.landing_zones_management_group_id
+  location                          = var.location
+  allowed_vm_sizes                  = var.allowed_vm_sizes
+  allowed_locations                 = var.allowed_locations
+  notification_emails               = var.notification_emails
+  
+  depends_on = [module.management_groups]
+}
+
+# Legacy Policies Module (keeping for backward compatibility)
 module "policies" {
   source = "./policies"
   

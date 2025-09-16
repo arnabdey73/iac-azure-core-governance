@@ -1,0 +1,84 @@
+# Azure Policy Initiative Definitions
+# Groups related policies into logical initiatives for easier management
+
+apiVersion: v1
+kind: PolicyInitiative
+metadata:
+  name: enterprise-security-baseline
+  displayName: "Enterprise Security Baseline"
+  description: "Comprehensive security baseline for enterprise Azure environments"
+  version: "1.0.0"
+  category: "Security"
+
+policyDefinitions:
+  - policyDefinitionId: "/providers/Microsoft.Management/managementGroups/{managementGroupId}/providers/Microsoft.Authorization/policyDefinitions/require-mandatory-tags-v2"
+    parameters:
+      requiredTags:
+        value: ["Environment", "SecurityClassification", "Owner", "Project"]
+      tagPatterns:
+        value:
+          Environment: "^(dev|test|staging|prod)$"
+          SecurityClassification: "^(public|internal|confidential|restricted)$"
+          Owner: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+          Project: "^[a-zA-Z0-9-]{3,50}$"
+
+  - policyDefinitionId: "/providers/Microsoft.Authorization/policyDefinitions/404c3081-a854-4457-ae30-26a93ef643f9"
+    displayName: "Secure transfer to storage accounts should be enabled"
+    
+  - policyDefinitionId: "/providers/Microsoft.Authorization/policyDefinitions/b954148f-4c11-4c38-8221-be76711e194a"
+    displayName: "SQL servers should have an Azure Active Directory administrator provisioned"
+    
+  - policyDefinitionId: "/providers/Microsoft.Authorization/policyDefinitions/057ef27e-665e-4328-8ea3-04b3122bd9fb"
+    displayName: "Audit VMs that do not use managed disks"
+
+---
+apiVersion: v1
+kind: PolicyInitiative
+metadata:
+  name: cost-management-baseline
+  displayName: "Cost Management Baseline"
+  description: "Policies for cost optimization and budget control"
+  version: "1.0.0"
+  category: "Cost Management"
+
+policyDefinitions:
+  - policyDefinitionId: "/providers/Microsoft.Management/managementGroups/{managementGroupId}/providers/Microsoft.Authorization/policyDefinitions/vm-size-restriction"
+    parameters:
+      allowedVMSizes:
+        value: ["Standard_B1s", "Standard_B2s", "Standard_D2s_v3", "Standard_D4s_v3"]
+        
+  - policyDefinitionId: "/providers/Microsoft.Management/managementGroups/{managementGroupId}/providers/Microsoft.Authorization/policyDefinitions/allowed-locations"
+    parameters:
+      allowedLocations:
+        value: ["eastus2", "centralus", "westus2"]
+        
+  - policyDefinitionId: "/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c"
+    displayName: "Allowed resource types"
+    parameters:
+      listOfResourceTypesAllowed:
+        value: [
+          "Microsoft.Compute/virtualMachines",
+          "Microsoft.Storage/storageAccounts",
+          "Microsoft.Network/virtualNetworks",
+          "Microsoft.Web/sites"
+        ]
+
+---
+apiVersion: v1
+kind: PolicyInitiative
+metadata:
+  name: regulatory-compliance
+  displayName: "Regulatory Compliance Framework"
+  description: "Policies ensuring compliance with various regulatory standards"
+  version: "1.0.0"
+  category: "Compliance"
+
+policyDefinitions:
+  - policyDefinitionId: "/providers/Microsoft.Authorization/policySetDefinitions/89c6cddc-1c73-4ac1-b19c-54d1a15a42f2"
+    displayName: "Azure Security Benchmark"
+    
+  - policyDefinitionId: "/providers/Microsoft.Authorization/policySetDefinitions/cf25b9c1-bd23-4eb6-bd5c-f4f3ac644a5f"
+    displayName: "ISO 27001:2013"
+    
+  - policyDefinitionId: "/providers/Microsoft.Authorization/policySetDefinitions/89c6cddc-1c73-4ac1-b19c-54d1a15a42f2"
+    displayName: "NIST SP 800-53 R4"

@@ -1,0 +1,61 @@
+{
+  "properties": {
+    "displayName": "Allowed Resource Locations",
+    "policyType": "Custom",
+    "mode": "Indexed",
+    "description": "This policy restricts resource deployment to approved Azure regions for compliance and data residency requirements.",
+    "metadata": {
+      "version": "1.1.0",
+      "category": "General",
+      "source": "Azure Governance Framework",
+      "severity": "High"
+    },
+    "parameters": {
+      "allowedLocations": {
+        "type": "Array",
+        "metadata": {
+          "displayName": "Allowed locations",
+          "description": "The list of locations that can be specified when deploying resources",
+          "strongType": "location"
+        },
+        "defaultValue": ["eastus2", "centralus", "westus2"]
+      },
+      "exemptResourceTypes": {
+        "type": "Array",
+        "metadata": {
+          "displayName": "Exempt resource types",
+          "description": "Resource types that are exempt from location restrictions"
+        },
+        "defaultValue": [
+          "Microsoft.Resources/resourceGroups",
+          "Microsoft.Resources/subscriptions",
+          "Microsoft.AzureActiveDirectory/b2cDirectories"
+        ]
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "location",
+            "exists": "true"
+          },
+          {
+            "field": "location",
+            "notIn": "[parameters('allowedLocations')]"
+          },
+          {
+            "field": "type",
+            "notIn": "[parameters('exemptResourceTypes')]"
+          }
+        ]
+      },
+      "then": {
+        "effect": "deny",
+        "details": {
+          "message": "This resource cannot be deployed in the specified location. Allowed locations are: [parameters('allowedLocations')]"
+        }
+      }
+    }
+  }
+}

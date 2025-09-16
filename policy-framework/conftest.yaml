@@ -1,0 +1,30 @@
+# Conftest Configuration for Policy Testing
+verification:
+  - name: azure-policies
+    description: "Azure Policy validation tests"
+    
+# Policy test configuration
+policy:
+  - path: "policy-framework/tests"
+    engine: rego
+    
+# Test data configuration  
+data:
+  - path: "policy-framework/test-data"
+    
+# Output configuration
+output:
+  - format: json
+    file: "test-results/policy-test-results.json"
+  - format: junit
+    file: "test-results/policy-test-results.xml"
+  - format: table
+    
+# Failure configuration
+fail-on-warn: true
+suppress-exceptions: false
+
+# Namespace configuration
+namespace: 
+  - "azure.policies"
+  - "azure.governance"

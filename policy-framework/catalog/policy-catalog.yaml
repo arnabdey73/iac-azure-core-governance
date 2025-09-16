@@ -1,0 +1,117 @@
+# Azure Policy Catalog
+# Centralized catalog of all Azure policies with metadata and versioning
+
+apiVersion: v1
+kind: PolicyCatalog
+metadata:
+  name: azure-governance-policies
+  version: "1.0.0"
+  description: "Enterprise Azure Governance Policy Catalog"
+  lastUpdated: "2025-09-16"
+
+categories:
+  - name: "security"
+    displayName: "Security Policies"
+    description: "Policies enforcing security best practices"
+    
+  - name: "cost-management"
+    displayName: "Cost Management"
+    description: "Policies for cost optimization and budget control"
+    
+  - name: "compliance"
+    displayName: "Regulatory Compliance"
+    description: "Policies ensuring regulatory compliance"
+    
+  - name: "operations"
+    displayName: "Operational Excellence"
+    description: "Policies for operational best practices"
+    
+  - name: "networking"
+    displayName: "Networking"
+    description: "Network security and connectivity policies"
+
+policies:
+  - id: "require-mandatory-tags-v2"
+    name: "Require Mandatory Tags (Enhanced)"
+    version: "2.0.0"
+    category: "operations"
+    severity: "high"
+    description: "Enforces mandatory tags on all resources with validation rules"
+    mode: "Indexed"
+    effect: "deny"
+    parameters:
+      - name: "requiredTags"
+        type: "array"
+        description: "List of required tag names"
+        defaultValue: ["Environment", "CostCenter", "Owner", "Project"]
+      - name: "tagPatterns"
+        type: "object"
+        description: "Validation patterns for tag values"
+    file: "security/require-mandatory-tags-v2.json"
+    tests:
+      - "tests/require-mandatory-tags-v2.test.rego"
+    changelog:
+      - version: "2.0.0"
+        date: "2025-09-16"
+        changes: "Added tag pattern validation and enhanced error messages"
+      - version: "1.0.0"
+        date: "2025-01-01"
+        changes: "Initial version with basic tag requirements"
+
+  - id: "allowed-locations"
+    name: "Allowed Resource Locations"
+    version: "1.1.0"
+    category: "compliance"
+    severity: "high"
+    description: "Restricts resource deployment to approved Azure regions"
+    mode: "Indexed"
+    effect: "deny"
+    parameters:
+      - name: "allowedLocations"
+        type: "array"
+        description: "List of allowed Azure regions"
+        defaultValue: ["eastus2", "centralus", "westus2"]
+    file: "compliance/allowed-locations.json"
+    tests:
+      - "tests/allowed-locations.test.rego"
+
+  - id: "require-https-storage"
+    name: "Require HTTPS for Storage Accounts"
+    version: "1.0.0"
+    category: "security"
+    severity: "high"
+    description: "Ensures storage accounts require secure transfer (HTTPS)"
+    mode: "Indexed"
+    effect: "deny"
+    file: "security/require-https-storage.json"
+    tests:
+      - "tests/require-https-storage.test.rego"
+
+  - id: "vm-size-restriction"
+    name: "VM Size Restrictions"
+    version: "1.0.0"
+    category: "cost-management"
+    severity: "medium"
+    description: "Restricts VM deployments to cost-effective sizes"
+    mode: "Indexed"
+    effect: "deny"
+    parameters:
+      - name: "allowedVMSizes"
+        type: "array"
+        description: "List of allowed VM sizes"
+        defaultValue: ["Standard_B2s", "Standard_D2s_v3", "Standard_D4s_v3"]
+    file: "cost-management/vm-size-restriction.json"
+    tests:
+      - "tests/vm-size-restriction.test.rego"
+
+  - id: "network-security-group-required"
+    name: "Network Security Group Required"
+    version: "1.0.0"
+    category: "networking"
+    severity: "high"
+    description: "Ensures all subnets have associated Network Security Groups"
+    mode: "Indexed"
+    effect: "audit"
+    file: "networking/nsg-required.json"
+    tests:
+      - "tests/nsg-required.test.rego"

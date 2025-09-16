@@ -1,0 +1,95 @@
+{
+  "properties": {
+    "displayName": "Require Mandatory Tags (Enhanced)",
+    "policyType": "Custom",
+    "mode": "Indexed",
+    "description": "This policy requires mandatory tags and validates their values according to specified patterns. It includes enhanced error messages and validation rules for better governance.",
+    "metadata": {
+      "version": "2.0.0",
+      "category": "Tags",
+      "source": "Azure Governance Framework",
+      "severity": "High"
+    },
+    "parameters": {
+      "requiredTags": {
+        "type": "Array",
+        "metadata": {
+          "displayName": "Required tags",
+          "description": "List of required tags that must be present on resources"
+        },
+        "defaultValue": ["Environment", "CostCenter", "Owner", "Project"]
+      },
+      "tagPatterns": {
+        "type": "Object",
+        "metadata": {
+          "displayName": "Tag validation patterns",
+          "description": "Regex patterns for validating tag values"
+        },
+        "defaultValue": {
+          "Environment": "^(dev|test|staging|prod)$",
+          "CostCenter": "^CC-[0-9]{4}$",
+          "Owner": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+          "Project": "^[a-zA-Z0-9-]{3,50}$"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "notIn": [
+              "Microsoft.Resources/subscriptions",
+              "Microsoft.Resources/subscriptions/resourceGroups"
+            ]
+          },
+          {
+            "anyOf": [
+              {
+                "count": {
+                  "value": "[parameters('requiredTags')]",
+                  "name": "requiredTag",
+                  "where": {
+                    "field": "[concat('tags[', current('requiredTag'), ']')]",
+                    "exists": "false"
+                  }
+                },
+                "greater": 0
+              },
+              {
+                "count": {
+                  "field": "tags",
+                  "where": {
+                    "allOf": [
+                      {
+                        "field": "[concat('tags[', field('tags[*]').key, ']')]",
+                        "exists": "true"
+                      },
+                      {
+                        "value": "[contains(parameters('requiredTags'), field('tags[*]').key)]",
+                        "equals": true
+                      },
+                      {
+                        "not": {
+                          "field": "[concat('tags[', field('tags[*]').key, ']')]",
+                          "match": "[parameters('tagPatterns')[field('tags[*]').key]]"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "greater": 0
+              }
+            ]
+          }
+        ]
+      },
+      "then": {
+        "effect": "deny",
+        "details": {
+          "message": "Resource is missing required tags or tag values don't match the required patterns. Required tags: [parameters('requiredTags')]. Please ensure all required tags are present and follow the specified format patterns."
+        }
+      }
+    }
+  }
+}

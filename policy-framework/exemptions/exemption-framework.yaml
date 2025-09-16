@@ -1,0 +1,100 @@
+# Policy Exemption Management Framework
+# Handles automated policy exemption requests with approval workflows
+
+apiVersion: v1
+kind: PolicyExemption
+metadata:
+  name: vm-size-exemption-template
+  description: "Template for VM size policy exemptions"
+  
+spec:
+  exemptionCategory: "Waiver"  # Waiver or Mitigation
+  expiresOn: "2026-12-31T23:59:59Z"
+  
+  # Approval workflow configuration
+  approvalWorkflow:
+    enabled: true
+    approvers:
+      - type: "group"
+        id: "security-team@company.com"
+        required: true
+      - type: "group" 
+        id: "cost-management@company.com"
+        required: true
+    approvalStages:
+      - name: "technical-review"
+        approvers: ["cloud-architects@company.com"]
+        timeout: "72h"
+      - name: "business-approval"
+        approvers: ["business-owners@company.com"] 
+        timeout: "120h"
+        
+  # Auto-expiration settings
+  autoExpiration:
+    enabled: true
+    warningPeriod: "30d"  # Warn 30 days before expiration
+    reminderInterval: "7d"
+    
+  # Required documentation
+  requiredFields:
+    - "businessJustification"
+    - "riskAssessment"
+    - "mitigationPlan"
+    - "expirationPlan"
+    
+  # Notification settings
+  notifications:
+    onCreate:
+      - "exemption-requests@company.com"
+    onApproval:
+      - "{{requester.email}}"
+      - "compliance-team@company.com"
+    onExpiration:
+      - "{{requester.email}}"
+      - "policy-owners@company.com"
+
+---
+apiVersion: v1
+kind: ExemptionRequest
+metadata:
+  name: "emergency-vm-deployment-2025-09-16"
+  resourceScope: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/emergency-rg"
+  policyAssignmentId: "/subscriptions/12345678-1234-1234-1234-123456789012/providers/Microsoft.Authorization/policyAssignments/vm-size-restriction"
+  
+spec:
+  requester:
+    email: "developer@company.com"
+    department: "Engineering"
+    manager: "engineering-manager@company.com"
+    
+  exemptionDetails:
+    category: "Waiver"
+    displayName: "Emergency VM Size Exemption"
+    description: "Temporary exemption for emergency deployment requiring larger VM sizes"
+    expiresOn: "2025-12-31T23:59:59Z"
+    
+  justification:
+    businessJustification: |
+      Emergency deployment for critical system recovery requires Standard_D8s_v3 VMs
+      to handle increased load during incident response. This is temporary until
+      proper capacity planning can be implemented.
+      
+    riskAssessment: |
+      Medium risk - increased costs during emergency period. Risk is mitigated by
+      temporary nature of deployment and monitoring alerts configured.
+      
+    mitigationPlan: |
+      1. Deploy monitoring and alerting for cost tracking
+      2. Schedule automatic VM downsizing after incident resolution
+      3. Implement proper capacity planning for future incidents
+      
+    expirationPlan: |
+      Resources will be right-sized by December 2025 following completion of
+      capacity planning initiative. Alternative solutions will be evaluated.
+      
+  # Audit trail
+  auditLog:
+    - timestamp: "2025-09-16T10:00:00Z"
+      action: "created"
+      user: "developer@company.com"
+      details: "Initial exemption request submitted"
