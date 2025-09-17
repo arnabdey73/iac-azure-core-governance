@@ -34,7 +34,7 @@ Root Management Group
 #### Built-in Policies
 - Azure Security Benchmark
 - Regulatory compliance baselines (ISO 27001, NIST, PCI DSS)
-- Cost management policies
+- Resource optimization policies
 
 #### Custom Policies
 - Mandatory tagging requirements
@@ -136,19 +136,7 @@ The framework supports multiple compliance standards:
 - Processing integrity
 - Privacy controls
 
-## Cost Management
 
-### Governance Controls
-- Budget policies and alerts
-- Resource tagging for cost allocation
-- Spending limits for sandbox environments
-- Cost optimization recommendations
-
-### Monitoring and Reporting
-- Cost by management group
-- Department and project cost allocation
-- Monthly cost trending and forecasting
-- Resource utilization analytics
 
 ## Disaster Recovery & Business Continuity
 
@@ -192,18 +180,14 @@ The framework supports multiple compliance standards:
 - Use version control for all configurations
 - Regular backup and disaster recovery testing
 
-### Cost Optimization
-- Right-size resources regularly
-- Use reserved instances for predictable workloads
-- Implement auto-shutdown for development resources
-- Regular cost reviews and optimizations
+
 
 ## Support and Maintenance
 
 ### Regular Reviews
 - Quarterly policy reviews
 - Monthly security assessments
-- Weekly cost optimization reviews
+
 - Annual governance framework updates
 
 ### Training and Documentation

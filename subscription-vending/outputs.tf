@@ -73,15 +73,7 @@ output "storage_account" {
   }
 }
 
-# Budget Information
-output "budget" {
-  description = "Budget configuration"
-  value = {
-    id     = azurerm_consumption_budget_subscription.main.id
-    name   = azurerm_consumption_budget_subscription.main.name
-    amount = azurerm_consumption_budget_subscription.main.amount
-  }
-}
+
 
 # Role Assignments
 output "role_assignments" {
@@ -134,7 +126,7 @@ output "environment_info" {
   value = {
     environment        = var.environment
     cost_center       = var.cost_center
-    monthly_budget    = var.monthly_budget_amount
+
     project_duration  = var.project_duration
     compliance_requirements = var.compliance_requirements
   }

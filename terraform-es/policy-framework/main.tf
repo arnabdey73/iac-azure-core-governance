@@ -108,36 +108,7 @@ resource "azurerm_policy_set_definition" "enterprise_security_baseline" {
   }
 }
 
-resource "azurerm_policy_set_definition" "cost_management_baseline" {
-  name                = "cost-management-baseline"
-  policy_type         = "Custom"
-  display_name        = "Cost Management Baseline"
-  description         = "Policies for cost optimization and budget control"
-  management_group_id = var.root_management_group_id
-  
-  metadata = jsonencode({
-    category = "Cost Management"
-    version  = "1.0.0"
-  })
 
-  policy_definition_reference {
-    policy_definition_id = azurerm_policy_definition.custom_policies["vm-size-restriction"].id
-    parameter_values = jsonencode({
-      allowedVMSizes = {
-        value = var.allowed_vm_sizes
-      }
-    })
-  }
-
-  policy_definition_reference {
-    policy_definition_id = azurerm_policy_definition.custom_policies["allowed-locations"].id
-    parameter_values = jsonencode({
-      allowedLocations = {
-        value = var.allowed_locations
-      }
-    })
-  }
-}
 
 # Policy Assignments with initiatives
 resource "azurerm_management_group_policy_assignment" "security_baseline" {
@@ -158,44 +129,8 @@ resource "azurerm_management_group_policy_assignment" "security_baseline" {
   })
 }
 
-resource "azurerm_management_group_policy_assignment" "cost_management" {
-  name                 = "cost-management-baseline"
-  policy_definition_id = azurerm_policy_set_definition.cost_management_baseline.id
-  management_group_id  = var.landing_zones_management_group_id
-  display_name         = "Cost Management Baseline Assignment"
-  description          = "Assigns cost management policies to landing zones"
-  location             = var.location
-  
-  identity {
-    type = "SystemAssigned"
-  }
-  
-  metadata = jsonencode({
-    assignedBy = "Azure Governance Framework"
-    category   = "Cost Management"
-  })
-}
 
-# Policy Exemption Management (Example)
-resource "azurerm_resource_policy_exemption" "emergency_vm_exemption" {
-  count = var.create_emergency_exemption ? 1 : 0
-  
-  name                            = "emergency-vm-size-exemption"
-  resource_id                     = var.emergency_resource_scope
-  policy_assignment_id            = azurerm_management_group_policy_assignment.cost_management.id
-  exemption_category              = "Waiver"
-  display_name                    = "Emergency VM Size Exemption"
-  description                     = "Temporary exemption for emergency deployment requiring larger VM sizes"
-  expires_on                      = var.exemption_expiry_date
-  policy_definition_reference_ids = [azurerm_policy_definition.custom_policies["vm-size-restriction"].id]
-  
-  metadata = jsonencode({
-    requester          = var.exemption_requester
-    businessJustification = var.business_justification
-    approvedBy         = var.exemption_approver
-    createdDate        = timestamp()
-  })
-}
+
 
 # Data source for policy compliance
 data "azurerm_policy_set_definition" "builtin_initiatives" {

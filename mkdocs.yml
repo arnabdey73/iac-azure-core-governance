@@ -4,6 +4,11 @@ site_author: Arnab Dey
 repo_url: https://github.com/arnabdey73/iac-azure-core-governance
 nav:
   - Home: docs/consolidated-docs.md
+  - Governance Framework: docs/governance-framework.md
+  - Deployment Guide: docs/deployment-guide.md
+  - Implementation Summary: docs/IMPLEMENTATION-SUMMARY.md
+  - Security Policy: docs/SECURITY.md
+  - Contributing: docs/CONTRIBUTING.md
 theme:
   name: material
   features:

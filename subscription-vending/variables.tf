@@ -204,38 +204,7 @@ variable "storage_allowed_ips" {
   default     = []
 }
 
-# Budget Configuration
-variable "monthly_budget_amount" {
-  description = "Monthly budget amount in USD"
-  type        = number
-  default     = 10000
-  validation {
-    condition     = var.monthly_budget_amount > 0
-    error_message = "Monthly budget amount must be greater than 0."
-  }
-}
 
-variable "budget_alert_thresholds" {
-  description = "Budget alert thresholds (percentages)"
-  type        = list(number)
-  default     = [75, 90, 100]
-  validation {
-    condition     = alltrue([for threshold in var.budget_alert_thresholds : threshold > 0 && threshold <= 100])
-    error_message = "Budget alert thresholds must be between 1 and 100."
-  }
-}
-
-variable "additional_budget_contacts" {
-  description = "Additional email addresses for budget alerts"
-  type        = list(string)
-  default     = []
-}
-
-variable "budget_alert_contact_groups" {
-  description = "Contact groups for budget alerts"
-  type        = list(string)
-  default     = []
-}
 
 # Policy Configuration
 variable "policy_initiative_ids" {

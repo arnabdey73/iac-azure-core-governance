@@ -19,7 +19,7 @@ spec:
         id: "security-team@company.com"
         required: true
       - type: "group" 
-        id: "cost-management@company.com"
+
         required: true
     approvalStages:
       - name: "technical-review"

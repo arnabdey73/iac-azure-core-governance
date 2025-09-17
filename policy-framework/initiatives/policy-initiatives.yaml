@@ -31,23 +31,7 @@ policyDefinitions:
   - policyDefinitionId: "/providers/Microsoft.Authorization/policyDefinitions/057ef27e-665e-4328-8ea3-04b3122bd9fb"
     displayName: "Audit VMs that do not use managed disks"
 
----
-apiVersion: v1
-kind: PolicyInitiative
-metadata:
-  name: cost-management-baseline
-  displayName: "Cost Management Baseline"
-  description: "Policies for cost optimization and budget control"
-  version: "1.0.0"
-  category: "Cost Management"
 
-policyDefinitions:
-  - policyDefinitionId: "/providers/Microsoft.Management/managementGroups/{managementGroupId}/providers/Microsoft.Authorization/policyDefinitions/vm-size-restriction"
-    parameters:
-      allowedVMSizes:
-        value: ["Standard_B1s", "Standard_B2s", "Standard_D2s_v3", "Standard_D4s_v3"]
-        
-  - policyDefinitionId: "/providers/Microsoft.Management/managementGroups/{managementGroupId}/providers/Microsoft.Authorization/policyDefinitions/allowed-locations"
     parameters:
       allowedLocations:
         value: ["eastus2", "centralus", "westus2"]

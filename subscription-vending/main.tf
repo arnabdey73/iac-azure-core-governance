@@ -222,36 +222,7 @@ resource "azurerm_storage_account" "main" {
   tags = local.environment_tags
 }
 
-# Budget for cost management
-resource "azurerm_consumption_budget_subscription" "main" {
-  name            = "budget-${var.subscription_name}-${var.environment}"
-  subscription_id = var.create_subscription ? azurerm_subscription.main[0].subscription_id : data.azurerm_client_config.current.subscription_id
-  
-  amount     = var.monthly_budget_amount
-  time_grain = "Monthly"
-  
-  time_period {
-    start_date = formatdate("YYYY-MM-01'T'00:00:00'Z'", timestamp())
-    end_date   = formatdate("YYYY-MM-01'T'00:00:00'Z'", timeadd(timestamp(), "8760h")) # 1 year
-  }
-  
-  dynamic "notification" {
-    for_each = var.budget_alert_thresholds
-    content {
-      enabled   = true
-      threshold = notification.value
-      operator  = "GreaterThan"
-      
-      contact_emails = concat(
-        [var.technical_owner, var.business_owner],
-        var.additional_budget_contacts
-      )
-      
-      contact_groups = var.budget_alert_contact_groups
-      contact_roles  = ["Owner", "Contributor"]
-    }
-  }
-}
+
 
 # Role assignments
 resource "azurerm_role_assignment" "technical_owner_contributor" {

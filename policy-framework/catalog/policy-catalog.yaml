@@ -14,9 +14,7 @@ categories:
     displayName: "Security Policies"
     description: "Policies enforcing security best practices"
     
-  - name: "cost-management"
-    displayName: "Cost Management"
-    description: "Policies for cost optimization and budget control"
+
     
   - name: "compliance"
     displayName: "Regulatory Compliance"
@@ -87,22 +85,7 @@ policies:
     tests:
       - "tests/require-https-storage.test.rego"
 
-  - id: "vm-size-restriction"
-    name: "VM Size Restrictions"
-    version: "1.0.0"
-    category: "cost-management"
-    severity: "medium"
-    description: "Restricts VM deployments to cost-effective sizes"
-    mode: "Indexed"
-    effect: "deny"
-    parameters:
-      - name: "allowedVMSizes"
-        type: "array"
-        description: "List of allowed VM sizes"
-        defaultValue: ["Standard_B2s", "Standard_D2s_v3", "Standard_D4s_v3"]
-    file: "cost-management/vm-size-restriction.json"
-    tests:
-      - "tests/vm-size-restriction.test.rego"
+
 
   - id: "network-security-group-required"
     name: "Network Security Group Required"

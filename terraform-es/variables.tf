@@ -54,7 +54,7 @@ variable "security_contact_phone" {
 
 # Policy Framework Variables
 variable "allowed_vm_sizes" {
-  description = "List of allowed VM sizes for cost management policies"
+  description = "List of allowed VM sizes for resource policies"
   type        = list(string)
   default = [
     "Standard_B1s",
@@ -79,14 +79,14 @@ variable "notification_emails" {
   type = object({
     security_team      = string
     compliance_team    = string
-    cost_management    = string
+
     cloud_architects   = string
     business_owners    = string
   })
   default = {
     security_team      = "security-team@company.com"
     compliance_team    = "compliance-team@company.com"
-    cost_management    = "cost-management@company.com"
+
     cloud_architects   = "cloud-architects@company.com"
     business_owners    = "business-owners@company.com"
   }

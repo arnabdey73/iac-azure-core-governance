@@ -20,11 +20,7 @@ output "policy_initiatives" {
       name         = azurerm_policy_set_definition.enterprise_security_baseline.name
       display_name = azurerm_policy_set_definition.enterprise_security_baseline.display_name
     }
-    cost_management_baseline = {
-      id           = azurerm_policy_set_definition.cost_management_baseline.id
-      name         = azurerm_policy_set_definition.cost_management_baseline.name
-      display_name = azurerm_policy_set_definition.cost_management_baseline.display_name
-    }
+
   }
 }
 
@@ -36,11 +32,7 @@ output "policy_assignments" {
       name         = azurerm_management_group_policy_assignment.security_baseline.name
       display_name = azurerm_management_group_policy_assignment.security_baseline.display_name
     }
-    cost_management = {
-      id           = azurerm_management_group_policy_assignment.cost_management.id
-      name         = azurerm_management_group_policy_assignment.cost_management.name
-      display_name = azurerm_management_group_policy_assignment.cost_management.display_name
-    }
+
   }
 }
 
@@ -55,17 +47,7 @@ output "builtin_initiative_assignments" {
   }
 }
 
-output "policy_exemptions" {
-  description = "Policy exemptions created"
-  value = var.create_emergency_exemption ? {
-    emergency_vm_exemption = {
-      id                  = azurerm_resource_policy_exemption.emergency_vm_exemption[0].id
-      name                = azurerm_resource_policy_exemption.emergency_vm_exemption[0].name
-      exemption_category  = azurerm_resource_policy_exemption.emergency_vm_exemption[0].exemption_category
-      expires_on          = azurerm_resource_policy_exemption.emergency_vm_exemption[0].expires_on
-    }
-  } : {}
-}
+
 
 # Policy catalog information
 output "policy_catalog" {
@@ -87,9 +69,6 @@ output "policy_assignment_identities" {
       principal_id = azurerm_management_group_policy_assignment.security_baseline.identity[0].principal_id
       tenant_id    = azurerm_management_group_policy_assignment.security_baseline.identity[0].tenant_id
     }
-    cost_management = {
-      principal_id = azurerm_management_group_policy_assignment.cost_management.identity[0].principal_id
-      tenant_id    = azurerm_management_group_policy_assignment.cost_management.identity[0].tenant_id
-    }
+
   }
 }
